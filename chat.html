@@ -1,0 +1,340 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>دردشة العميل والكابتن</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      direction: rtl;
+    }
+    header {
+      background: #0077cc;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .order-info {
+      font-size: 14px;
+      background: rgba(255,255,255,0.1);
+      padding: 5px 10px;
+      border-radius: 10px;
+    }
+    .back-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 15px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    #chat-window {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      background: white;
+    }
+    .message {
+      max-width: 70%;
+      margin-bottom: 12px;
+      padding: 10px 15px;
+      border-radius: 20px;
+      clear: both;
+      word-wrap: break-word;
+      position: relative;
+    }
+    .message.client {
+      background: #0077cc;
+      color: white;
+      float: left;
+      border-bottom-left-radius: 5px;
+    }
+    .message.captain {
+      background: #e5e5ea;
+      color: #000;
+      float: right;
+      border-bottom-right-radius: 5px;
+    }
+    .message-time {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 5px;
+    }
+    #input-area {
+      display: flex;
+      padding: 10px;
+      background: white;
+      border-top: 1px solid #ccc;
+    }
+    #input-area input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      outline: none;
+    }
+    #input-area button {
+      background: #0077cc;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      margin-left: 10px;
+      border-radius: 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #input-area button:hover {
+      background: #005a99;
+    }
+    .typing-indicator {
+      display: none;
+      color: #666;
+      font-style: italic;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="back-btn" onclick="goBack()">← رجوع</button>
+    <div>دردشة الطلب</div>
+    <div class="order-info" id="orderInfo">جاري التحميل...</div>
+  </header>
+
+  <div id="chat-window">
+    <div id="messagesContainer">
+      <!-- الرسائل ستظهر هنا -->
+    </div>
+    <div class="typing-indicator" id="typingIndicator">يكتب...</div>
+  </div>
+
+  <div id="input-area">
+    <input type="text" id="message-input" placeholder="اكتب رسالتك هنا..." />
+    <button id="send-btn">إرسال</button>
+  </div>
+
+  <script>
+    const chatWindow = document.getElementById('chat-window');
+    const messagesContainer = document.getElementById('messagesContainer');
+    const input = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const orderInfo = document.getElementById('orderInfo');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    // الحصول على معرف الطلب من الرابط
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+    
+    // تحديد نوع المستخدم (عميل أو كابتن)
+    let userType = 'client'; // افتراضي
+    let userName = '';
+    let userPhone = '';
+
+    // التحقق من نوع المستخدم
+    const captainName = localStorage.getItem('captainName');
+    const clientName = localStorage.getItem('userName');
+    
+    if (captainName) {
+      userType = 'captain';
+      userName = captainName;
+      userPhone = localStorage.getItem('captainPhone');
+    } else if (clientName) {
+      userType = 'client';
+      userName = clientName;
+      userPhone = localStorage.getItem('userPhone');
+    }
+
+    // تحميل معلومات الطلب
+    function loadOrderInfo() {
+      if (!orderId) {
+        orderInfo.textContent = 'معرف الطلب غير موجود';
+        return;
+      }
+
+      const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+      const order = orders.find(o => o.id === orderId);
+      
+      if (order) {
+        orderInfo.textContent = `${order.pickup} → ${order.delivery}`;
+      } else {
+        orderInfo.textContent = 'الطلب غير موجود';
+      }
+    }
+
+    // تحميل الرسائل
+    function loadMessages() {
+      if (!orderId) return;
+      
+      const chatKey = `chat_${orderId}`;
+      const messages = JSON.parse(localStorage.getItem(chatKey) || '[]');
+      
+      messagesContainer.innerHTML = '';
+      
+      messages.forEach(message => {
+        addMessageToUI(message.text, message.sender, message.timestamp, false);
+      });
+      
+      scrollToBottom();
+    }
+
+    // إضافة رسالة للواجهة
+    function addMessageToUI(text, sender, timestamp, isNew = true) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message', sender);
+      
+      const messageContent = document.createElement('div');
+      messageContent.textContent = text;
+      msgDiv.appendChild(messageContent);
+      
+      const timeDiv = document.createElement('div');
+      timeDiv.classList.add('message-time');
+      timeDiv.textContent = new Date(timestamp).toLocaleTimeString('ar-EG', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      msgDiv.appendChild(timeDiv);
+      
+      messagesContainer.appendChild(msgDiv);
+      
+      if (isNew) {
+        scrollToBottom();
+      }
+    }
+
+    // حفظ الرسالة
+    function saveMessage(text, sender) {
+      if (!orderId) return;
+      
+      const chatKey = `chat_${orderId}`;
+      const messages = JSON.parse(localStorage.getItem(chatKey) || '[]');
+      
+      const message = {
+        text: text,
+        sender: sender,
+        timestamp: new Date().toISOString(),
+        senderName: userName,
+        senderPhone: userPhone
+      };
+      
+      messages.push(message);
+      localStorage.setItem(chatKey, JSON.stringify(messages));
+      
+      return message;
+    }
+
+    // إرسال رسالة
+    function sendMessage() {
+      const text = input.value.trim();
+      if (!text || !orderId) return;
+
+      // حفظ الرسالة
+      const message = saveMessage(text, userType);
+      
+      // إضافة للواجهة
+      addMessageToUI(text, userType, message.timestamp);
+      
+      input.value = '';
+      
+      // محاكاة كتابة الطرف الآخر (للتجربة)
+      if (userType === 'client') {
+        showTypingIndicator();
+        setTimeout(() => {
+          hideTypingIndicator();
+          const autoReply = getAutoReply(text);
+          const replyMessage = saveMessage(autoReply, 'captain');
+          addMessageToUI(autoReply, 'captain', replyMessage.timestamp);
+        }, 1500);
+      }
+    }
+
+    // ردود تلقائية للتجربة
+    function getAutoReply(clientMessage) {
+      const replies = [
+        'تم استلام رسالتك، شكراً لك!',
+        'أنا في الطريق إليك الآن',
+        'سأصل خلال 10 دقائق تقريباً',
+        'تم التسليم بنجاح، شكراً لثقتك',
+        'إذا كان لديك أي استفسار، لا تتردد في السؤال'
+      ];
+      return replies[Math.floor(Math.random() * replies.length)];
+    }
+
+    // عرض مؤشر الكتابة
+    function showTypingIndicator() {
+      typingIndicator.style.display = 'block';
+      scrollToBottom();
+    }
+
+    // إخفاء مؤشر الكتابة
+    function hideTypingIndicator() {
+      typingIndicator.style.display = 'none';
+    }
+
+    // التمرير للأسفل
+    function scrollToBottom() {
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // العودة للصفحة السابقة
+    function goBack() {
+      if (userType === 'captain') {
+        window.location.href = 'captain-orders_1750026768859.html';
+      } else {
+        window.location.href = 'my-ordrs_1750026768929.html';
+      }
+    }
+
+    // الأحداث
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // تحديث دوري للرسائل الجديدة
+    function checkForNewMessages() {
+      const currentCount = messagesContainer.children.length;
+      loadMessages();
+      const newCount = messagesContainer.children.length;
+      
+      // إذا كان هناك رسائل جديدة، قم بالتمرير للأسفل
+      if (newCount > currentCount) {
+        scrollToBottom();
+      }
+    }
+
+    // تهيئة الصفحة
+    window.onload = function() {
+      if (!orderId) {
+        alert('معرف الطلب مطلوب');
+        goBack();
+        return;
+      }
+      
+      loadOrderInfo();
+      loadMessages();
+      
+      // تحديث كل 3 ثوان للرسائل الجديدة
+      setInterval(checkForNewMessages, 3000);
+      
+      // التركيز على حقل الإدخال
+      input.focus();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>طلب توصيل - طيار</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      max-width: 100%;
+      margin: 0;
+      background: #e7f0ff;
+      direction: rtl;
+      box-sizing: border-box;
+    }
+    
+    /* تحسين للهواتف المحمولة */
+    @media (min-width: 768px) {
+      body {
+        padding: 20px;
+        max-width: 500px;
+        margin: auto;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+      
+      h2 {
+        font-size: 20px;
+        margin: 10px 0;
+      }
+      
+      input, textarea {
+        font-size: 16px; /* منع التكبير التلقائي في iOS */
+      }
+      
+      button {
+        font-size: 16px;
+        padding: 12px;
+      }
+      
+      .location-btn {
+        font-size: 13px;
+        padding: 8px 12px;
+      }
+    }
+    h2 {
+      text-align: center;
+      color: #004080;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    button {
+      margin-top: 15px;
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background: #005a99;
+    }
+    button:active {
+      background: #004080;
+    }
+    .price-display {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #004080;
+      text-align: center;
+      background: #f0f8ff;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .location-section {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 2px solid #0077cc;
+    }
+    .location-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      width: calc(50% - 10px);
+    }
+    .location-btn:hover {
+      background: #218838;
+    }
+    .location-btn.active {
+      background: #dc3545;
+    }
+    .location-info {
+      background: #e7f3ff;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 14px;
+      border: 1px solid #0077cc;
+    }
+    .distance-info {
+      background: #d4edda;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+      color: #155724;
+      border: 2px solid #28a745;
+    }
+    .manual-location {
+      display: none;
+      background: #fff3cd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 2px solid #ffc107;
+    }
+    .manual-location.show {
+      display: block;
+    }
+    .coords-input {
+      width: calc(50% - 10px);
+      margin: 5px;
+    }
+    .status-msg {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .success { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+    .warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
+    
+    /* أنماط الخريطة - محسنة للهواتف المحمولة */
+    .map-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+    }
+    .map-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      border-radius: 0;
+      overflow: hidden;
+    }
+    .map-header {
+      background: #0077cc;
+      color: white;
+      padding: 12px 10px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .map-content {
+      height: calc(100vh - 160px);
+      position: relative;
+    }
+    
+    /* تحسين للشاشات الصغيرة */
+    @media (max-width: 768px) {
+      .map-header {
+        padding: 10px 8px;
+        font-size: 14px;
+      }
+      .map-content {
+        height: calc(100vh - 150px);
+      }
+      .map-controls {
+        padding: 10px;
+      }
+      .map-btn {
+        padding: 8px 15px;
+        font-size: 14px;
+        margin: 0 5px;
+      }
+    }
+    #realMap {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .map-controls {
+      background: #f8f9fa;
+      padding: 15px;
+      text-align: center;
+      border-top: 2px solid #0077cc;
+    }
+    .map-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 0 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .map-btn:hover {
+      background: #218838;
+    }
+    .map-btn.cancel {
+      background: #dc3545;
+    }
+    .map-btn.cancel:hover {
+      background: #c82333;
+    }
+    .selected-location {
+      background: #e7f3ff;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-size: 14px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    
+    /* تأثيرات التفاعل */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .map-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .location-btn:hover {
+      transform: translateY(-1px);
+      transition: all 0.2s ease;
+    }
+    
+    /* تحسين شكل نتائج البحث */
+    #searchResults div:hover {
+      background: #f0f8ff !important;
+      border-color: #0077cc !important;
+      transform: translateX(-3px);
+      transition: all 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <h2>طلب توصيل جديد</h2>
+
+  <div class="location-section">
+    <h3 style="margin: 0 0 15px 0; color: #004080; text-align: center;">📍 تحديد المواقع</h3>
+
+    <div style="text-align: center; margin-bottom: 15px;">
+      <button class="location-btn" id="autoLocationBtn" onclick="useAutoLocation()">
+        🌍 استخدام GPS التلقائي
+      </button>
+      <button class="location-btn" id="manualLocationBtn" onclick="useManualLocation()">
+        ✏️ إدخال يدوي
+      </button>
+    </div>
+
+    <div id="statusMsg" class="status-msg warning">
+      اختر طريقة تحديد المواقع أعلاه
+    </div>
+
+    <div id="autoLocationSection" style="display: none;">
+      <button class="location-btn" id="pickupBtn" onclick="openMapForLocation('pickup')" style="width: 100%;">
+        📍 تحديد موقع الاستلام على الخريطة
+      </button>
+      <button class="location-btn" id="deliveryBtn" onclick="openMapForLocation('delivery')" style="width: 100%; margin-top: 10px;">
+        🎯 تحديد موقع التسليم على الخريطة
+      </button>
+      <div style="margin-top: 10px; text-align: center;">
+        <button class="location-btn" onclick="getCurrentLocation('pickup')" style="width: 48%; font-size: 14px; padding: 8px;">
+          🌍 موقعي الحالي
+        </button>
+        <button class="location-btn" onclick="getCurrentLocation('delivery')" style="width: 48%; font-size: 14px; padding: 8px; margin-left: 4%;">
+          🌍 موقعي للتسليم
+        </button>
+      </div>
+    </div>
+
+    <div id="manualLocationSection" class="manual-location">
+      <h4>إدخال المواقع يدوياً:</h4>
+      <div>
+        <label>موقع الاستلام:</label>
+        <input type="text" id="manualPickupAddress" placeholder="أدخل عنوان الاستلام">
+        <div style="margin-top: 5px;">
+          <input type="number" id="manualPickupLat" class="coords-input" placeholder="خط العرض" step="any">
+          <input type="number" id="manualPickupLng" class="coords-input" placeholder="خط الطول" step="any">
+        </div>
+      </div>
+      <div style="margin-top: 15px;">
+        <label>موقع التسليم:</label>
+        <input type="text" id="manualDeliveryAddress" placeholder="أدخل عنوان التسليم">
+        <div style="margin-top: 5px;">
+          <input type="number" id="manualDeliveryLat" class="coords-input" placeholder="خط العرض" step="any">
+          <input type="number" id="manualDeliveryLng" class="coords-input" placeholder="خط الطول" step="any">
+        </div>
+      </div>
+      <button onclick="calculateManualDistance()" style="width: 100%; margin-top: 15px; background: #28a745;">
+        حساب المسافة والسعر
+      </button>
+    </div>
+  </div>
+
+  <div class="location-info" id="pickupInfo">مكان الاستلام: غير محدد</div>
+  <div class="location-info" id="deliveryInfo">مكان التسليم: غير محدد</div>
+  <div class="distance-info" id="distanceInfo">المسافة: غير محسوبة</div>
+
+  <label for="pickup">مكان الاستلام (العنوان):</label>
+  <input type="text" id="pickup" placeholder="سيتم ملؤه تلقائياً" readonly />
+
+  <!-- تفاصيل مكان الاستلام -->
+  <div style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd;">
+    <h4 style="margin: 0 0 10px 0; color: #0077cc;">📍 تفاصيل مكان الاستلام</h4>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+      <input type="number" id="pickupFloor" placeholder="رقم الدور" style="flex: 1; min-width: 0;" />
+      <input type="number" id="pickupApartment" placeholder="رقم الشقة" style="flex: 1; min-width: 0;" />
+    </div>
+    <input type="text" id="pickupDetails" placeholder="معلومات إضافية (لون العمارة، علامة مميزة، إلخ...)" style="width: 100%;" />
+  </div>
+
+  <label for="delivery">مكان التسليم (العنوان):</label>
+  <input type="text" id="delivery" placeholder="سيتم ملؤه تلقائياً" readonly />
+
+  <!-- تفاصيل مكان التسليم -->
+  <div style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd;">
+    <h4 style="margin: 0 0 10px 0; color: #0077cc;">🎯 تفاصيل مكان التسليم</h4>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+      <input type="number" id="deliveryFloor" placeholder="رقم الدور" style="flex: 1; min-width: 0;" />
+      <input type="number" id="deliveryApartment" placeholder="رقم الشقة" style="flex: 1; min-width: 0;" />
+    </div>
+    <input type="text" id="deliveryDetails" placeholder="معلومات إضافية (لون العمارة، علامة مميزة، إلخ...)" style="width: 100%;" />
+  </div>
+
+  <label for="description">وصف الطلب:</label>
+  <textarea id="description" placeholder="صف ما تريد توصيله"></textarea>
+
+  <div class="price-display" id="priceDisplay">السعر: 0 جنيه</div>
+
+  <button id="sendOrderBtn" onclick="sendOrder()">إرسال الطلب</button>
+
+  <!-- نافذة الخريطة المنبثقة -->
+  <div id="mapModal" class="map-modal">
+    <div class="map-container">
+      <div class="map-header" id="mapHeader">
+        انقر على الخريطة لتحديد الموقع أو استخدم البحث
+      </div>
+      
+      <!-- خانة البحث - محسنة للهواتف المحمولة -->
+      <div style="padding: 8px; background: #f8f9fa; border-bottom: 2px solid #0077cc;">
+        <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+          <input type="text" id="searchLocation" 
+                 placeholder="ابحث عن مكان..." 
+                 style="flex: 1; min-width: 200px; padding: 10px 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px;">
+          <button onclick="searchForLocation()" 
+                  style="background: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 5px; cursor: pointer; font-size: 14px; white-space: nowrap;">
+            🔍
+          </button>
+          <button id="quickConfirmBtn" onclick="quickConfirmLocation()" 
+                  style="background: #28a745; color: white; border: none; padding: 10px 12px; border-radius: 5px; cursor: pointer; font-size: 14px; display: none; white-space: nowrap;">
+            ✅
+          </button>
+        </div>
+        <div id="searchResults" style="margin-top: 8px; display: none; max-height: 150px; overflow-y: auto;">
+          <!-- نتائج البحث ستظهر هنا -->
+        </div>
+      </div>
+      
+      <div class="map-content">
+        <div id="realMap"></div>
+      </div>
+      <div id="selectedLocationInfo" class="selected-location" style="display: none;">
+        الموقع المحدد: لم يتم التحديد بعد
+      </div>
+      <div class="map-controls">
+        <button class="map-btn" id="confirmLocationBtn" onclick="confirmLocation()" style="display: none; background: #28a745; font-size: 16px; padding: 12px 20px; width: auto; min-width: 120px;">
+          ✅ تأكيد الموقع
+        </button>
+        <button class="map-btn cancel" onclick="closeMap()" style="width: auto; min-width: 80px;">
+          ❌ إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let pickupLocation = null;
+    let deliveryLocation = null;
+    let isDeliverySelectionEnabled = false;
+    let currentMapMode = null; // 'pickup' or 'delivery'
+    let selectedMapLocation = null;
+    let map = null;
+    let currentMarker = null;
+
+    // استخدام الموقع التلقائي
+    function useAutoLocation() {
+      document.getElementById('autoLocationSection').style.display = 'block';
+      document.getElementById('manualLocationSection').classList.remove('show');
+      document.getElementById('autoLocationBtn').classList.add('active');
+      document.getElementById('manualLocationBtn').classList.remove('active');
+      updateStatus('success', '✅ تم تفعيل نظام GPS التلقائي');
+    }
+
+    // استخدام الإدخال اليدوي
+    function useManualLocation() {
+      document.getElementById('autoLocationSection').style.display = 'none';
+      document.getElementById('manualLocationSection').classList.add('show');
+      document.getElementById('manualLocationBtn').classList.add('active');
+      document.getElementById('autoLocationBtn').classList.remove('active');
+      updateStatus('success', '✅ تم تفعيل الإدخال اليدوي');
+    }
+
+    // تحديث رسائل الحالة
+    function updateStatus(type, message) {
+      const statusMsg = document.getElementById('statusMsg');
+      statusMsg.className = `status-msg ${type}`;
+      statusMsg.textContent = message;
+    }
+
+    // الحصول على الموقع الحالي
+    function getCurrentLocation(type) {
+      if (!navigator.geolocation) {
+        updateStatus('error', '❌ جهازك لا يدعم خدمة تحديد المواقع GPS');
+        return;
+      }
+
+      updateStatus('warning', '⏳ جاري تحديد موقعك... يرجى الانتظار');
+
+      const button = type === 'pickup' ? document.getElementById('pickupBtn') : null;
+      if (button) {
+        button.textContent = '⏳ جاري تحديد الموقع...';
+        button.disabled = true;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+
+          if (type === 'pickup') {
+            pickupLocation = location;
+            document.getElementById('pickup').value = `موقع GPS: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+            document.getElementById('pickupInfo').textContent = `✅ مكان الاستلام: تم تحديده بواسطة GPS`;
+            document.getElementById('pickupBtn').textContent = '✅ تم تحديد موقع الاستلام';
+            document.getElementById('pickupBtn').style.background = '#28a745';
+            updateStatus('success', '✅ تم تحديد موقع الاستلام بنجاح!');
+          } else if (type === 'delivery') {
+            deliveryLocation = location;
+            document.getElementById('delivery').value = `موقع GPS: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+            document.getElementById('deliveryInfo').textContent = `✅ مكان التسليم: تم تحديده بواسطة GPS`;
+            document.getElementById('deliveryBtn').textContent = '✅ تم تحديد موقع التسليم';
+            document.getElementById('deliveryBtn').style.background = '#28a745';
+            updateStatus('success', '✅ تم تحديد موقع التسليم بنجاح!');
+          }
+          
+          // حساب المسافة إذا تم تحديد الموقعين
+          if (pickupLocation && deliveryLocation) {
+            calculateDistance();
+          }
+
+          if (button) button.disabled = false;
+        },
+        function(error) {
+          let errorMessage = 'فشل في تحديد موقعك: ';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'تم رفض إذن الوصول للموقع';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'معلومات الموقع غير متاحة';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'انتهت مهلة تحديد الموقع';
+              break;
+            default:
+              errorMessage += 'خطأ غير معروف';
+              break;
+          }
+
+          updateStatus('error', '❌ ' + errorMessage);
+
+          if (button) {
+            button.textContent = '🔄 حاول مرة أخرى';
+            button.disabled = false;
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 300000
+        }
+      );
+    }
+
+    // فتح الخريطة لتحديد الموقع
+    function openMapForLocation(type) {
+      currentMapMode = type;
+      selectedMapLocation = null;
+      
+      const modal = document.getElementById('mapModal');
+      const header = document.getElementById('mapHeader');
+      const selectedInfo = document.getElementById('selectedLocationInfo');
+      const confirmBtn = document.getElementById('confirmLocationBtn');
+      
+      if (type === 'pickup') {
+        header.textContent = 'تحديد موقع الاستلام - انقر على الخريطة';
+      } else {
+        header.textContent = 'تحديد موقع التسليم - انقر على الخريطة';
+      }
+      
+      selectedInfo.style.display = 'none';
+      confirmBtn.style.display = 'none';
+      
+      modal.style.display = 'block';
+      
+      // إنشاء الخريطة الحقيقية
+      setTimeout(() => {
+        createRealMap();
+      }, 100);
+      
+      updateStatus('warning', '📍 انقر على الخريطة لتحديد الموقع');
+    }
+
+    // إنشاء خريطة حقيقية باستخدام Leaflet
+    function createRealMap() {
+      // إزالة الخريطة السابقة إن وجدت
+      if (map) {
+        map.remove();
+        map = null;
+      }
+      
+      // تحديد النقطة الابتدائية - أولاً الموقع المحدد مسبقاً أو الموقع الحالي أو القاهرة
+      let initialLat = 30.0444;
+      let initialLng = 31.2357;
+      let initialZoom = 10;
+      
+      // إذا كان هناك موقع محدد مسبقاً، استخدمه
+      if (currentMapMode === 'pickup' && pickupLocation) {
+        initialLat = pickupLocation.lat;
+        initialLng = pickupLocation.lng;
+        initialZoom = 15;
+      } else if (currentMapMode === 'delivery' && deliveryLocation) {
+        initialLat = deliveryLocation.lat;
+        initialLng = deliveryLocation.lng;
+        initialZoom = 15;
+      }
+      
+      // إنشاء خريطة جديدة
+      map = L.map('realMap').setView([initialLat, initialLng], initialZoom);
+      
+      // إضافة طبقة الخريطة من OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+      // إضافة علامة الموقع المحدد مسبقاً إن وجد
+      if ((currentMapMode === 'pickup' && pickupLocation) || (currentMapMode === 'delivery' && deliveryLocation)) {
+        const existingLocation = currentMapMode === 'pickup' ? pickupLocation : deliveryLocation;
+        currentMarker = L.marker([existingLocation.lat, existingLocation.lng])
+          .addTo(map)
+          .bindPopup(`الموقع المحدد مسبقاً: ${existingLocation.lat.toFixed(6)}, ${existingLocation.lng.toFixed(6)}`)
+          .openPopup();
+        
+        selectedMapLocation = existingLocation;
+        
+        // إظهار زر التأكيد فوراً للموقع المحدد مسبقاً
+        setTimeout(() => {
+          showLocationConfirmation();
+        }, 200);
+      } else {
+        // محاولة تحديد الموقع الحالي إذا لم يكن هناك موقع محدد مسبقاً
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              
+              // إذا لم نكن قد حددنا موقع مسبقاً، انتقل للموقع الحالي
+              if (!((currentMapMode === 'pickup' && pickupLocation) || (currentMapMode === 'delivery' && deliveryLocation))) {
+                map.setView([lat, lng], 15);
+                
+                // إضافة علامة للموقع الحالي
+                L.marker([lat, lng])
+                  .addTo(map)
+                  .bindPopup('موقعك الحالي - انقر هنا لتحديده أو انقر في مكان آخر')
+                  .openPopup();
+              }
+            },
+            function(error) {
+              console.log('تعذر تحديد الموقع الحالي:', error);
+            }
+          );
+        }
+      }
+      
+      // إضافة مستمع للنقر على الخريطة
+      map.on('click', function(e) {
+        selectLocationOnRealMap(e.latlng);
+      });
+    }
+
+    // البحث عن موقع
+    function searchForLocation() {
+      const searchTerm = document.getElementById('searchLocation').value.trim();
+      if (!searchTerm) {
+        alert('يرجى إدخال اسم المكان للبحث');
+        return;
+      }
+      
+      // استخدام Nominatim API للبحث (مجاني)
+      const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchTerm + ' مصر')}&limit=5&accept-language=ar`;
+      
+      fetch(searchUrl)
+        .then(response => response.json())
+        .then(data => {
+          displaySearchResults(data);
+        })
+        .catch(error => {
+          console.error('خطأ في البحث:', error);
+          alert('حدث خطأ أثناء البحث. يرجى المحاولة مرة أخرى.');
+        });
+    }
+
+    // عرض نتائج البحث
+    function displaySearchResults(results) {
+      const resultsContainer = document.getElementById('searchResults');
+      
+      if (!results || results.length === 0) {
+        resultsContainer.innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px;">لم يتم العثور على نتائج</div>';
+        resultsContainer.style.display = 'block';
+        return;
+      }
+      
+      let resultsHTML = '<div style="color: #0077cc; font-weight: bold; margin-bottom: 5px;">نتائج البحث:</div>';
+      
+      results.forEach((result, index) => {
+        resultsHTML += `
+          <div onclick="selectSearchResult(${result.lat}, ${result.lon}, '${result.display_name.replace(/'/g, "\\'")}')" 
+               style="background: white; margin: 3px 0; padding: 8px; border: 1px solid #ddd; border-radius: 3px; cursor: pointer; font-size: 13px;">
+            📍 ${result.display_name}
+          </div>
+        `;
+      });
+      
+      resultsContainer.innerHTML = resultsHTML;
+      resultsContainer.style.display = 'block';
+    }
+
+    // اختيار نتيجة من البحث
+    function selectSearchResult(lat, lng, displayName) {
+      // الانتقال إلى الموقع على الخريطة
+      map.setView([lat, lng], 16);
+      
+      // تحديد الموقع
+      const latlng = { lat: parseFloat(lat), lng: parseFloat(lng) };
+      selectLocationOnRealMap(latlng);
+      
+      // إخفاء نتائج البحث
+      document.getElementById('searchResults').style.display = 'none';
+      document.getElementById('searchLocation').value = displayName.split(',')[0]; // أول جزء من الاسم
+    }
+
+    // تحديد الموقع على الخريطة الحقيقية
+    function selectLocationOnRealMap(latlng) {
+      selectedMapLocation = { lat: latlng.lat, lng: latlng.lng };
+      
+      // إزالة العلامة السابقة
+      if (currentMarker) {
+        map.removeLayer(currentMarker);
+      }
+      
+      // إضافة علامة جديدة مع أيقونة مميزة
+      currentMarker = L.marker([latlng.lat, latlng.lng])
+        .addTo(map)
+        .bindPopup(`
+          <div style="text-align: center;">
+            <strong>الموقع المحدد</strong><br>
+            📍 ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}<br>
+            <small style="color: #666;">انقر على "تأكيد وحفظ الموقع" للمتابعة</small>
+          </div>
+        `)
+        .openPopup();
+      
+      // إظهار معلومات الموقع وزر التأكيد فوراً
+      const selectedInfo = document.getElementById('selectedLocationInfo');
+      const confirmBtn = document.getElementById('confirmLocationBtn');
+      
+      selectedInfo.innerHTML = `
+        <div style="text-align: center;">
+          ✅ <strong>تم تحديد الموقع بنجاح!</strong><br>
+          📍 ${selectedMapLocation.lat.toFixed(6)}, ${selectedMapLocation.lng.toFixed(6)}<br>
+          <small style="color: #666;">اضغط على "تأكيد وحفظ الموقع" لحفظ اختيارك</small>
+        </div>
+      `;
+      selectedInfo.style.display = 'block';
+      selectedInfo.style.background = '#d4edda';
+      selectedInfo.style.border = '2px solid #28a745';
+      selectedInfo.style.animation = 'pulse 1s ease-in-out';
+      
+      confirmBtn.style.display = 'inline-block';
+      confirmBtn.style.animation = 'pulse 1s ease-in-out';
+      
+      // إظهار زر التأكيد السريع في شريط البحث
+      const quickConfirmBtn = document.getElementById('quickConfirmBtn');
+      quickConfirmBtn.style.display = 'inline-block';
+      quickConfirmBtn.style.animation = 'pulse 1s ease-in-out';
+    }
+
+    // تأكيد سريع للموقع من شريط البحث
+    function quickConfirmLocation() {
+      if (!selectedMapLocation || !currentMapMode) {
+        alert('لم يتم تحديد موقع!');
+        return;
+      }
+      
+      // استخدام نفس منطق confirmLocation
+      confirmLocation();
+    }
+
+    // إظهار تأكيد الموقع
+    function showLocationConfirmation() {
+      const selectedInfo = document.getElementById('selectedLocationInfo');
+      const confirmBtn = document.getElementById('confirmLocationBtn');
+      
+      if (selectedMapLocation) {
+        selectedInfo.innerHTML = `
+          <div style="text-align: center;">
+            ✅ <strong>تم تحديد الموقع بنجاح!</strong><br>
+            📍 ${selectedMapLocation.lat.toFixed(6)}, ${selectedMapLocation.lng.toFixed(6)}<br>
+            <small style="color: #666;">اضغط على "تأكيد وحفظ الموقع" لحفظ اختيارك</small>
+          </div>
+        `;
+        selectedInfo.style.display = 'block';
+        selectedInfo.style.background = '#d4edda';
+        selectedInfo.style.border = '2px solid #28a745';
+        selectedInfo.style.animation = 'pulse 1s ease-in-out';
+        
+        // إظهار زر التأكيد بشكل واضح
+        confirmBtn.style.display = 'inline-block';
+        confirmBtn.style.visibility = 'visible';
+        confirmBtn.style.opacity = '1';
+        confirmBtn.disabled = false;
+        confirmBtn.style.animation = 'pulse 1s ease-in-out';
+        
+        // إظهار زر التأكيد السريع أيضاً
+        const quickConfirmBtn = document.getElementById('quickConfirmBtn');
+        quickConfirmBtn.style.display = 'inline-block';
+        quickConfirmBtn.style.animation = 'pulse 1s ease-in-out';
+        
+        console.log('تم إظهار أزرار التأكيد'); // للتحقق من التشغيل
+      }
+    }
+
+    // تأكيد الموقع المحدد
+    function confirmLocation() {
+      if (!selectedMapLocation || !currentMapMode) {
+        alert('لم يتم تحديد موقع!');
+        return;
+      }
+      
+      // تأثير تأكيد بصري
+      const confirmBtn = document.getElementById('confirmLocationBtn');
+      confirmBtn.textContent = '✅ جاري الحفظ...';
+      confirmBtn.disabled = true;
+      
+      setTimeout(() => {
+        if (currentMapMode === 'pickup') {
+          pickupLocation = selectedMapLocation;
+          
+          // تحديث الواجهة
+          const searchValue = document.getElementById('searchLocation').value;
+          const locationText = searchValue || `موقع خريطة: ${selectedMapLocation.lat.toFixed(6)}, ${selectedMapLocation.lng.toFixed(6)}`;
+          
+          document.getElementById('pickup').value = locationText;
+          document.getElementById('pickupInfo').innerHTML = `✅ <strong>مكان الاستلام:</strong> تم تحديده على الخريطة بنجاح`;
+          
+          const pickupBtn = document.getElementById('pickupBtn');
+          pickupBtn.textContent = '✅ تم تحديد موقع الاستلام - انقر للتعديل';
+          pickupBtn.style.background = '#28a745';
+          
+          updateStatus('success', '✅ تم حفظ موقع الاستلام بنجاح!');
+          
+        } else if (currentMapMode === 'delivery') {
+          deliveryLocation = selectedMapLocation;
+          
+          // تحديث الواجهة
+          const searchValue = document.getElementById('searchLocation').value;
+          const locationText = searchValue || `موقع خريطة: ${selectedMapLocation.lat.toFixed(6)}, ${selectedMapLocation.lng.toFixed(6)}`;
+          
+          document.getElementById('delivery').value = locationText;
+          document.getElementById('deliveryInfo').innerHTML = `✅ <strong>مكان التسليم:</strong> تم تحديده على الخريطة بنجاح`;
+          
+          const deliveryBtn = document.getElementById('deliveryBtn');
+          deliveryBtn.textContent = '✅ تم تحديد موقع التسليم - انقر للتعديل';
+          deliveryBtn.style.background = '#28a745';
+          
+          updateStatus('success', '✅ تم حفظ موقع التسليم بنجاح!');
+        }
+        
+        // حساب المسافة إذا تم تحديد الموقعين
+        if (pickupLocation && deliveryLocation) {
+          calculateDistance();
+        }
+        
+        closeMap();
+      }, 1000);
+    }
+
+    // إغلاق الخريطة
+    function closeMap() {
+      document.getElementById('mapModal').style.display = 'none';
+      
+      // إعادة تعيين حقل البحث ونتائجه
+      document.getElementById('searchLocation').value = '';
+      document.getElementById('searchResults').style.display = 'none';
+      document.getElementById('searchResults').innerHTML = '';
+      
+      // إعادة تعيين معلومات الموقع المحدد
+      const selectedInfo = document.getElementById('selectedLocationInfo');
+      selectedInfo.style.display = 'none';
+      selectedInfo.style.background = '#e7f3ff';
+      selectedInfo.style.border = '1px solid #0077cc';
+      
+      // إعادة تعيين زر التأكيد
+      const confirmBtn = document.getElementById('confirmLocationBtn');
+      confirmBtn.style.display = 'none';
+      confirmBtn.textContent = '✅ تأكيد وحفظ الموقع';
+      confirmBtn.disabled = false;
+      
+      // إخفاء زر التأكيد السريع
+      const quickConfirmBtn = document.getElementById('quickConfirmBtn');
+      quickConfirmBtn.style.display = 'none';
+      
+      currentMapMode = null;
+      selectedMapLocation = null;
+      
+      // إزالة الخريطة لتوفير الذاكرة
+      if (map) {
+        map.remove();
+        map = null;
+      }
+      currentMarker = null;
+    }
+
+    // حساب المسافة اليدوية
+    function calculateManualDistance() {
+      const pickupAddress = document.getElementById('manualPickupAddress').value;
+      const pickupLat = parseFloat(document.getElementById('manualPickupLat').value);
+      const pickupLng = parseFloat(document.getElementById('manualPickupLng').value);
+
+      const deliveryAddress = document.getElementById('manualDeliveryAddress').value;
+      const deliveryLat = parseFloat(document.getElementById('manualDeliveryLat').value);
+      const deliveryLng = parseFloat(document.getElementById('manualDeliveryLng').value);
+
+      if (!pickupAddress || !deliveryAddress || isNaN(pickupLat) || isNaN(pickupLng) || isNaN(deliveryLat) || isNaN(deliveryLng)) {
+        updateStatus('error', '❌ يرجى ملء جميع البيانات المطلوبة');
+        return;
+      }
+
+      pickupLocation = { lat: pickupLat, lng: pickupLng };
+      deliveryLocation = { lat: deliveryLat, lng: deliveryLng };
+
+      document.getElementById('pickup').value = pickupAddress;
+      document.getElementById('delivery').value = deliveryAddress;
+
+      document.getElementById('pickupInfo').textContent = `✅ مكان الاستلام: ${pickupAddress}`;
+      document.getElementById('deliveryInfo').textContent = `✅ مكان التسليم: ${deliveryAddress}`;
+
+      calculateDistance();
+      updateStatus('success', '✅ تم حساب المسافة والسعر بنجاح!');
+    }
+
+    // حساب المسافة بين نقطتين
+    function calculateDistance() {
+      if (!pickupLocation || !deliveryLocation) {
+        return;
+      }
+
+      // حساب المسافة باستخدام قانون Haversine
+      const R = 6371; // نصف قطر الأرض بالكيلومتر
+      const dLat = toRad(deliveryLocation.lat - pickupLocation.lat);
+      const dLng = toRad(deliveryLocation.lng - pickupLocation.lng);
+
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(pickupLocation.lat)) * Math.cos(toRad(deliveryLocation.lat)) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = R * c; // المسافة بالكيلومتر
+
+      const distanceKm = distance.toFixed(2);
+      document.getElementById('distanceInfo').textContent = `✅ المسافة: ${distanceKm} كم`;
+
+      // حساب السعر
+      const price = calculatePrice(parseFloat(distanceKm));
+      document.getElementById('priceDisplay').textContent = `💰 السعر: ${price} جنيه`;
+    }
+
+    // تحويل الدرجات إلى راديان
+    function toRad(deg) {
+      return deg * (Math.PI/180);
+    }
+
+    // حساب السعر حسب المسافة
+    function calculatePrice(distance) {
+      if (!distance || distance <= 0) return 0;
+      const basePricePer3km = 28;
+      const tax = 10;
+      const price = (distance / 3) * basePricePer3km + tax;
+      return Math.round(price);
+    }
+
+    // إرسال الطلب
+    function sendOrder() {
+      const pickup = document.getElementById('pickup').value.trim();
+      const delivery = document.getElementById('delivery').value.trim();
+      const description = document.getElementById('description').value.trim();
+
+      // جمع تفاصيل الاستلام
+      const pickupFloor = document.getElementById('pickupFloor').value.trim();
+      const pickupApartment = document.getElementById('pickupApartment').value.trim();
+      const pickupDetails = document.getElementById('pickupDetails').value.trim();
+
+      // جمع تفاصيل التسليم
+      const deliveryFloor = document.getElementById('deliveryFloor').value.trim();
+      const deliveryApartment = document.getElementById('deliveryApartment').value.trim();
+      const deliveryDetails = document.getElementById('deliveryDetails').value.trim();
+
+      if (!pickupLocation || !deliveryLocation) {
+        alert('⚠️ يجب تحديد مواقع الاستلام والتسليم أولاً!');
+        return;
+      }
+
+      if (!pickup || !delivery || !description) {
+        alert('يرجى ملء جميع البيانات المطلوبة');
+        return;
+      }
+
+      // حساب المسافة من النص المعروض
+      const distanceText = document.getElementById('distanceInfo').textContent;
+      const distanceMatch = distanceText.match(/(\d+\.?\d*)\s*كم/);
+      const distance = distanceMatch ? parseFloat(distanceMatch[1]) : 0;
+
+      if (distance <= 0) {
+        alert('لا يمكن حساب المسافة، يرجى المحاولة مرة أخرى');
+        return;
+      }
+
+      const price = calculatePrice(distance);
+
+      // استرجاع بيانات المستخدم
+      const userName = localStorage.getItem('userName');
+      const userPhone = localStorage.getItem('userPhone');
+
+      if (!userName || !userPhone) {
+        alert('الرجاء تسجيل الدخول أولاً');
+        window.location.href = 'user-register.html';
+        return;
+      }
+
+      // حفظ الطلب في localStorage
+      let orders = JSON.parse(localStorage.getItem('orders') || '[]');
+
+      const order = {
+        id: 'order-' + Date.now(),
+        userName,
+        userPhone,
+        pickup,
+        delivery,
+        description,
+        distance,
+        price,
+        status: 'pending',
+        captainName: '',
+        captainPhone: '',
+        createdAt: new Date().toISOString(),
+        pickupCoords: {
+          lat: pickupLocation.lat,
+          lng: pickupLocation.lng
+        },
+        deliveryCoords: {
+          lat: deliveryLocation.lat,
+          lng: deliveryLocation.lng
+        },
+        pickupDetails: {
+          floor: pickupFloor,
+          apartment: pickupApartment,
+          additionalInfo: pickupDetails
+        },
+        deliveryDetails: {
+          floor: deliveryFloor,
+          apartment: deliveryApartment,
+          additionalInfo: deliveryDetails
+        }
+      };
+
+      orders.push(order);
+      localStorage.setItem('orders', JSON.stringify(orders));
+
+      alert('✅ تم إرسال الطلب بنجاح!');
+
+      // إعادة تعيين النموذج
+      resetForm();
+    }
+
+    // إعادة تعيين النموذج
+    function resetForm() {
+      document.getElementById('pickup').value = '';
+      document.getElementById('delivery').value = '';
+      document.getElementById('description').value = '';
+      
+      // إعادة تعيين تفاصيل الاستلام
+      document.getElementById('pickupFloor').value = '';
+      document.getElementById('pickupApartment').value = '';
+      document.getElementById('pickupDetails').value = '';
+      
+      // إعادة تعيين تفاصيل التسليم
+      document.getElementById('deliveryFloor').value = '';
+      document.getElementById('deliveryApartment').value = '';
+      document.getElementById('deliveryDetails').value = '';
+      
+      document.getElementById('priceDisplay').textContent = 'السعر: 0 جنيه';
+      document.getElementById('pickupInfo').textContent = 'مكان الاستلام: غير محدد';
+      document.getElementById('deliveryInfo').textContent = 'مكان التسليم: غير محدد';
+      document.getElementById('distanceInfo').textContent = 'المسافة: غير محسوبة';
+
+      // إخفاء الأقسام
+      document.getElementById('autoLocationSection').style.display = 'none';
+      document.getElementById('manualLocationSection').classList.remove('show');
+      document.getElementById('autoLocationBtn').classList.remove('active');
+      document.getElementById('manualLocationBtn').classList.remove('active');
+
+      // إعادة تعيين الأزرار
+      document.getElementById('pickupBtn').textContent = '📍 تحديد موقع الاستلام الحالي';
+      document.getElementById('pickupBtn').style.background = '#28a745';
+      document.getElementById('deliveryBtn').textContent = '🎯 تحديد موقع التسليم';
+      document.getElementById('deliveryBtn').style.background = '#28a745';
+      document.getElementById('deliveryBtn').onclick = enableDeliverySelection;
+
+      // إعادة تعيين المتغيرات
+      pickupLocation = null;
+      deliveryLocation = null;
+      isDeliverySelectionEnabled = false;
+
+      updateStatus('warning', 'اختر طريقة تحديد المواقع أعلاه');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>محفظة الكابتن - طيار</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      background: #f0f8ff;
+      direction: rtl;
+    }
+    .header {
+      background: #0077cc;
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .balance {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .transaction {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .transaction.positive {
+      border-left: 4px solid #28a745;
+    }
+    .transaction-date {
+      font-size: 12px;
+      color: #666;
+    }
+    .back-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .back-btn:hover {
+      background: #5a6268;
+    }
+    .no-transactions {
+      text-align: center;
+      color: #666;
+      padding: 40px;
+    }
+  </style>
+</head>
+<body>
+  <button class="back-btn" onclick="goBack()">← رجوع</button>
+  
+  <div class="header">
+    <h2>محفظة الكابتن</h2>
+    <div class="balance" id="balance">0 جنيه</div>
+  </div>
+
+  <h3>سجل المعاملات</h3>
+  <div id="transactionsContainer"></div>
+
+  <script>
+    // التحقق من تسجيل الدخول
+    function checkLogin() {
+      const captainPhone = localStorage.getItem('captainPhone');
+      if (!captainPhone) {
+        alert('يجب تسجيل الدخول أولاً');
+        window.location.href = 'captain-login_1750026768731.html';
+        return null;
+      }
+      return captainPhone;
+    }
+
+    // تحميل بيانات المحفظة
+    function loadWallet() {
+      const captainPhone = checkLogin();
+      if (!captainPhone) return;
+
+      const walletKey = `wallet_${captainPhone}`;
+      const wallet = JSON.parse(localStorage.getItem(walletKey) || '{"balance": 0, "transactions": []}');
+      
+      // عرض الرصيد
+      document.getElementById('balance').textContent = wallet.balance + ' جنيه';
+      
+      // عرض المعاملات
+      const container = document.getElementById('transactionsContainer');
+      container.innerHTML = '';
+      
+      if (wallet.transactions.length === 0) {
+        container.innerHTML = '<div class="no-transactions">لا توجد معاملات بعد</div>';
+        return;
+      }
+      
+      // ترتيب المعاملات من الأحدث للأقدم
+      wallet.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      wallet.transactions.forEach(transaction => {
+        const div = document.createElement('div');
+        div.className = 'transaction positive';
+        
+        const date = new Date(transaction.date).toLocaleDateString('ar-EG');
+        const time = new Date(transaction.date).toLocaleTimeString('ar-EG', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>+${transaction.amount} جنيه</strong>
+              <div style="font-size: 14px; color: #666;">${transaction.description}</div>
+              <div style="font-size: 12px; color: #999;">عمولة مخصومة: ${transaction.commission} جنيه</div>
+            </div>
+            <div class="transaction-date">${date}<br>${time}</div>
+          </div>
+        `;
+        
+        container.appendChild(div);
+      });
+    }
+
+    // العودة للصفحة السابقة
+    function goBack() {
+      window.location.href = 'captain-orders_1750026768859.html';
+    }
+
+    // تهيئة الصفحة
+    window.onload = function() {
+      loadWallet();
+    };
+  </script>
+</body>
+</html>

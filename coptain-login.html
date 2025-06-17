@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>تسجيل دخول الكابتن - طيار</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      max-width: 350px;
+      margin: auto;
+      background: #eef6fb;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 15px;
+    }
+    button:hover {
+      background: #005a99;
+    }
+  </style>
+</head>
+<body>
+  <h2>تسجيل دخول الكابتن</h2>
+  <input type="text" id="captainName" placeholder="اسم الكابتن" />
+  <input type="text" id="captainPhone" placeholder="رقم الهاتف" />
+  <button id="loginBtn">دخول</button>
+
+  <script>
+    document.getElementById('loginBtn').onclick = () => {
+      const name = document.getElementById('captainName').value.trim();
+      const phone = document.getElementById('captainPhone').value.trim();
+
+      if (!name || !phone) {
+        alert('يرجى إدخال الاسم ورقم الهاتف');
+        return;
+      }
+
+      localStorage.setItem('captainName', name);
+      localStorage.setItem('captainPhone', phone);
+      window.location.href = 'captain-orders_1750026768859.html';
+    };
+  </script>
+</body>
+</html>
